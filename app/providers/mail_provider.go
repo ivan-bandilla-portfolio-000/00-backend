@@ -12,7 +12,7 @@ type MailProvider struct {
 func NewMailProvider() *MailProvider {
 	emailService, err := email.NewEmailService()
 	if err != nil {
-		log.Printf("Warning: Failed to initialize email service: %v", err)
+		log.Fatalf("Failed to initialize email service: %v", err)
 	}
 	return &MailProvider{
 		EmailService: emailService,

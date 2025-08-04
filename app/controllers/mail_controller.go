@@ -96,6 +96,7 @@ func (ec *EmailController) SendEmail(w http.ResponseWriter, r *http.Request) {
 // Handler: GET /preview-email
 func (ec *EmailController) PreviewEmail(w http.ResponseWriter, r *http.Request) {
 	if ec.EmailService == nil {
+		log.Println("EmailService is nil in PreviewEmail handler")
 		http.Error(w, "Email service not initialized", http.StatusInternalServerError)
 		return
 	}

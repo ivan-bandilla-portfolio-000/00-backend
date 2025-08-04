@@ -3,6 +3,7 @@ package providers
 import (
 	"net/http"
 	"portfolio-backend/app/controllers"
+	"portfolio-backend/app/middlewares"
 	"portfolio-backend/config"
 	"portfolio-backend/routes"
 )
@@ -37,5 +38,10 @@ func NewAppServiceProvider() *AppServiceProvider {
 }
 
 func (asp *AppServiceProvider) Handler() http.Handler {
-	return asp.CorsProvider.Handler(asp.Mux.ServeHTTP)
+	// Wrap the mux with the global rate limiter, then adapt to HandlerFunc for CORS
+	return asp.CorsProvider.Handler(
+		func(w http.ResponseWriter, r *http.Request) {
+			middlewares.GlobalRateLimiter(asp.Mux).ServeHTTP(w, r)
+		},
+	)
 }
