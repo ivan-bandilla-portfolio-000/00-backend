@@ -20,11 +20,14 @@ func getEnvOrDefault(key, defaultValue string) string {
 func main() {
 	bootstrap.LoadEnv()
 
+	env := getEnvOrDefault("APP_ENV", "local")
+
 	app := providers.NewAppServiceProvider()
 
 	// Start server
-	port := getEnvOrDefault("PORT", "8080")
-	log.Printf("Server started on :%s", port)
+	serverURL := getEnvOrDefault("SERVER_URL", "8080")
+	serverPort := getEnvOrDefault("SERVER_PORT", "8080")
+	log.Printf("Server [%s] started on %s", env, serverURL)
 
-	log.Fatal(http.ListenAndServe(":"+port, app.Handler()))
+	log.Fatal(http.ListenAndServe(":"+serverPort, app.Handler()))
 }

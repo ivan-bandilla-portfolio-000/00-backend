@@ -1,48 +1,52 @@
-package controllers
+package email
 
 import (
-	"encoding/json"
 	"log"
-	"net/http"
 	"os"
+	validation_email "portfolio-backend/services/validation/email"
+	"portfolio-backend/utils"
 	"strconv"
 	"strings"
 	"time"
 
-	"portfolio-backend/services/email"
-	"portfolio-backend/utils"
-
 	"gopkg.in/gomail.v2"
 )
 
-type EmailController struct {
-	EmailService *email.EmailService
+type MailService struct {
+	MailRendererService *MailRendererService
 }
 
-func NewEmailController(emailService *email.EmailService) *EmailController {
-	return &EmailController{
-		EmailService: emailService,
-	}
+func NewMailService(mailRendererService *MailRendererService) *MailService {
+	return &MailService{MailRendererService: mailRendererService}
 }
 
-type EmailRequest struct {
-	From    string `json:"from"`
-	Subject string `json:"subject"`
-	Body    string `json:"body"`
-	Name    string `json:"name,omitempty"`
-	Email   string `json:"email,omitempty"`
+type ContactRequest struct {
+	From    string
+	Subject string
+	Body    string
+	Name    string
 }
 
-// Handler: POST /send-email
-func (ec *EmailController) SendEmail(w http.ResponseWriter, r *http.Request) {
-	var req EmailRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
+func (cs *MailService) SendContactEmail(req ContactRequest) error {
+	// Validate email
+	_, err := validation_email.ValidateEmail(req.From)
+	if err != nil {
+		return err
 	}
 
-	emailData := email.EmailData{
+	// Render sender info
+	var senderInfo strings.Builder
+	err = cs.MailRendererService.Templates().ExecuteTemplate(&senderInfo, "components/ui/sender.tmpl", map[string]interface{}{
+		"FromEmail": req.From,
+		"Subject":   req.Subject,
+	})
+	if err != nil {
+		log.Printf("Failed to render sender info: %v", err)
+	}
+
+	emailBodyWithSenderInfo := senderInfo.String() + req.Body
+
+	emailData := EmailData{
 		AppName:     utils.GetEnvOrDefault("APP_NAME", "Portfolio"),
 		Subject:     req.Subject,
 		SiteURL:     utils.GetEnvOrDefault("APP_URL", "https://yourdomain.com"),
@@ -50,17 +54,17 @@ func (ec *EmailController) SendEmail(w http.ResponseWriter, r *http.Request) {
 		Year:        time.Now().Year(),
 		FromName:    utils.GetNameFromEmail(req.From, req.Name),
 		FromEmail:   req.From,
-		Body:        req.Body,
+		Body:        emailBodyWithSenderInfo,
 	}
 
-	htmlBody, err := ec.EmailService.RenderContactEmail(emailData)
+	htmlBody, err := cs.MailRendererService.RenderContactEmail(emailData)
 	if err != nil {
 		log.Printf("Failed to render email template: %v", err)
 		htmlBody = generateFallbackHTML(req)
 	}
 
 	m := gomail.NewMessage()
-	m.SetHeader("From", req.From)
+	m.SetHeader("From", os.Getenv("EMAIL_FROM"))
 	m.SetHeader("To", os.Getenv("THIS_PORTFOLIO_CONTACT_EMAIL"))
 	m.SetHeader("Subject", req.Subject)
 	m.SetBody("text/html", htmlBody)
@@ -69,8 +73,7 @@ func (ec *EmailController) SendEmail(w http.ResponseWriter, r *http.Request) {
 
 	port, err := strconv.Atoi(os.Getenv("SMTP_PORT"))
 	if err != nil {
-		http.Error(w, "Invalid SMTP_PORT", http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	d := gomail.NewDialer(
@@ -82,26 +85,14 @@ func (ec *EmailController) SendEmail(w http.ResponseWriter, r *http.Request) {
 
 	if err := d.DialAndSend(m); err != nil {
 		log.Printf("Failed to send email: %v", err)
-		http.Error(w, "Failed to send email", http.StatusInternalServerError)
-		return
+		return err
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Your message was sent successfully!",
-	})
+	return nil
 }
 
-// Handler: GET /preview-email
-func (ec *EmailController) PreviewEmail(w http.ResponseWriter, r *http.Request) {
-	if ec.EmailService == nil {
-		log.Println("EmailService is nil in PreviewEmail handler")
-		http.Error(w, "Email service not initialized", http.StatusInternalServerError)
-		return
-	}
-
-	emailData := email.EmailData{
+func (cs *MailService) GeneratePreviewEmail() (string, error) {
+	emailData := EmailData{
 		AppName:     utils.GetEnvOrDefault("APP_NAME", "Ivan Bandilla Portfolio"),
 		Subject:     "Contact Form Preview",
 		SiteURL:     utils.GetEnvOrDefault("APP_URL", "https://ivanbandilla.dev"),
@@ -112,19 +103,15 @@ func (ec *EmailController) PreviewEmail(w http.ResponseWriter, r *http.Request) 
 		Body:        "This is a preview of your Laravel-style email template. The styling matches Laravel's default mail templates exactly!",
 	}
 
-	htmlBody, err := ec.EmailService.RenderContactEmail(emailData)
+	htmlBody, err := cs.MailRendererService.RenderContactEmail(emailData)
 	if err != nil {
-		http.Error(w, "Failed to render email template: "+err.Error(), http.StatusInternalServerError)
-		return
+		return "", err
 	}
-
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(htmlBody))
+	return htmlBody, nil
 }
 
-// --- Helpers ---
-
-func generateFallbackHTML(req EmailRequest) string {
+// You can move this helper here as well
+func generateFallbackHTML(req ContactRequest) string {
 	return `
 <!DOCTYPE html>
 <html>

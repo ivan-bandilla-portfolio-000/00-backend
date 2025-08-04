@@ -2,7 +2,7 @@ package providers
 
 import (
 	"net/http"
-	"portfolio-backend/app/controllers"
+	api_controllers "portfolio-backend/app/controllers/api"
 	"portfolio-backend/app/middlewares"
 	"portfolio-backend/config"
 	"portfolio-backend/routes"
@@ -12,8 +12,8 @@ type AppServiceProvider struct {
 	Mux               *http.ServeMux
 	CorsProvider      *CorsProvider
 	MailProvider      *MailProvider
-	EmailController   *controllers.EmailController
-	DiscordController *controllers.DiscordController
+	EmailController   *api_controllers.EmailController
+	DiscordController *api_controllers.DiscordController
 }
 
 func NewAppServiceProvider() *AppServiceProvider {
@@ -22,8 +22,8 @@ func NewAppServiceProvider() *AppServiceProvider {
 	mux := http.NewServeMux()
 	mailProvider := NewMailProvider()
 
-	emailController := controllers.NewEmailController(mailProvider.EmailService)
-	discordController := controllers.NewDiscordController()
+	emailController := api_controllers.NewEmailController(mailProvider.MailService)
+	discordController := api_controllers.NewDiscordController()
 
 	routes.RegisterAuthRoutes(mux)
 	routes.RegisterWebRoutes(mux, emailController, discordController)

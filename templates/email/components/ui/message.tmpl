@@ -1,12 +1,5 @@
 <h1>Hello!</h1>
-<p>You have received a new message from your portfolio contact form:</p>
-<h2>Contact Details</h2>
-<p><strong>Name:</strong> {{ .FromName }}<br>
-<strong>Email:</strong> {{ .FromEmail }}<br>
-<strong>Subject:</strong> {{ .Subject }}</p>
-<h2>Message</h2>
 {{ MarkdownToHTML .Body }}
 <hr>
 </br>
-<p>If you have any questions, please don't hesitate to contact us.</p>
 <p>Thanks,<br>{{ .HeaderTitle }}</p>

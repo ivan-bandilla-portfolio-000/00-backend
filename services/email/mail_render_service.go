@@ -35,13 +35,13 @@ type ComponentData struct {
 	Align string
 }
 
-// EmailService handles email template rendering
-type EmailService struct {
+// MailRendererService handles email template rendering
+type MailRendererService struct {
 	templates *template.Template
 }
 
-// NewEmailService creates a new email service with loaded templates
-func NewEmailService() (*EmailService, error) {
+// NewMailRendererService creates a new email service with loaded templates
+func NewMailRendererService() (*MailRendererService, error) {
 	// Use the function map from markdown.go
 	funcMap := GetTemplateFuncMap()
 
@@ -80,44 +80,28 @@ func NewEmailService() (*EmailService, error) {
 		return nil, err
 	}
 
-	return &EmailService{templates: tmpl}, nil
+	return &MailRendererService{templates: tmpl}, nil
 }
 
 // RenderHeader renders the email header component
-func (es *EmailService) RenderHeader(url, slot string) (template.HTML, error) {
-	var buf bytes.Buffer
-	data := map[string]interface{}{
+func (es *MailRendererService) RenderHeader(url, slot string) (template.HTML, error) {
+	header, err := es.renderToString("components/ui/header.tmpl", map[string]interface{}{
 		"url":  url,
 		"slot": slot,
-	}
-
-	err := es.templates.ExecuteTemplate(&buf, "components/ui/header.tmpl", data)
-	if err != nil {
-		return "", err
-	}
-
-	return template.HTML(buf.String()), nil
+	})
+	return template.HTML(header), err
 }
 
 // RenderFooter renders the email footer component
-func (es *EmailService) RenderFooter(content string) (template.HTML, error) {
-	var buf bytes.Buffer
-	data := map[string]interface{}{
+func (es *MailRendererService) RenderFooter(content string) (template.HTML, error) {
+	footer, err := es.renderToString("components/ui/footer.tmpl", map[string]interface{}{
 		"slot": content,
-	}
-
-	err := es.templates.ExecuteTemplate(&buf, "components/ui/footer.tmpl", data)
-	if err != nil {
-		return "", err
-	}
-
-	return template.HTML(buf.String()), nil
+	})
+	return template.HTML(footer), err
 }
 
 // RenderContactEmail renders the contact form email
-func (es *EmailService) RenderContactEmail(data EmailData) (string, error) {
-	var buf bytes.Buffer
-
+func (es *MailRendererService) RenderContactEmail(data EmailData) (string, error) {
 	// Set default values if not provided
 	if data.Year == 0 {
 		data.Year = time.Now().Year()
@@ -139,7 +123,6 @@ func (es *EmailService) RenderContactEmail(data EmailData) (string, error) {
 	}
 	data.Header = header
 
-	// Render footer
 	footerContent := "© " + strconv.Itoa(data.Year) + " " + data.HeaderTitle + ". All rights reserved."
 	footer, err := es.RenderFooter(footerContent)
 	if err != nil {
@@ -148,18 +131,22 @@ func (es *EmailService) RenderContactEmail(data EmailData) (string, error) {
 	data.Footer = footer
 
 	// Render message content
-	var msgBuf bytes.Buffer
-	err = es.templates.ExecuteTemplate(&msgBuf, "components/ui/message.tmpl", data)
+	slot, err := es.renderToString("components/ui/message.tmpl", data)
 	if err != nil {
 		return "", err
 	}
-	data.Slot = msgBuf.String()
+	data.Slot = slot
 
 	// Render layout
-	err = es.templates.ExecuteTemplate(&buf, "components/ui/layout.tmpl", data)
-	if err != nil {
-		return "", err
-	}
+	return es.renderToString("components/ui/layout.tmpl", data)
+}
 
-	return buf.String(), nil
+func (es *MailRendererService) renderToString(name string, data interface{}) (string, error) {
+	var buf bytes.Buffer
+	err := es.templates.ExecuteTemplate(&buf, name, data)
+	return buf.String(), err
+}
+
+func (es *MailRendererService) Templates() *template.Template {
+	return es.templates
 }

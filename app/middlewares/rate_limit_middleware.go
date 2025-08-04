@@ -3,6 +3,7 @@ package middlewares
 import (
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 )
@@ -20,6 +21,11 @@ func RateLimitMiddlewareWithKey(
 ) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if os.Getenv("APP_ENV") == "local" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			ip := r.Header.Get("X-Forwarded-For")
 			if ip == "" {
 				ip = r.RemoteAddr

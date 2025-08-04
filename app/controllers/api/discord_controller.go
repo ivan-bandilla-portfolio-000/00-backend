@@ -1,4 +1,4 @@
-package controllers
+package api_controllers
 
 import (
 	"bytes"

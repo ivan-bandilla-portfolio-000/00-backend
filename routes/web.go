@@ -2,13 +2,13 @@ package routes
 
 import (
 	"net/http"
-	"portfolio-backend/app/controllers"
+	api_controllers "portfolio-backend/app/controllers/api"
 	"portfolio-backend/app/middlewares"
 	"portfolio-backend/services/redis"
 	"time"
 )
 
-func RegisterWebRoutes(mux *http.ServeMux, emailController *controllers.EmailController, discordController *controllers.DiscordController) {
+func RegisterWebRoutes(mux *http.ServeMux, emailController *api_controllers.EmailController, discordController *api_controllers.DiscordController) {
 	rateLimiter := redis.NewUpstashService()
 	// Create the middleware (e.g., 5 requests per second, burst 10)
 	withRateLimit := func(baseKey string, rps, burst int, ttl time.Duration, handler http.HandlerFunc) http.Handler {

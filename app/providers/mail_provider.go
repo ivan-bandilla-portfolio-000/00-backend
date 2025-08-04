@@ -6,15 +6,16 @@ import (
 )
 
 type MailProvider struct {
-	EmailService *email.EmailService
+	MailService *email.MailService
 }
 
 func NewMailProvider() *MailProvider {
-	emailService, err := email.NewEmailService()
+	mailRendererService, err := email.NewMailRendererService()
 	if err != nil {
-		log.Fatalf("Failed to initialize email service: %v", err)
+		log.Fatalf("Failed to initialize mail renderer service: %v", err)
 	}
+	mailService := email.NewMailService(mailRendererService)
 	return &MailProvider{
-		EmailService: emailService,
+		MailService: mailService,
 	}
 }
