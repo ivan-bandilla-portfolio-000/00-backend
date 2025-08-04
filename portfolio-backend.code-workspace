@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../portfolio-frontend"
+		},
+		{
+			"path": "../codeyani/talapamana-administrator/resources/views/vendor/mail/html"
+		},
+		{
+			"path": "../codeyani/talapamana-administrator/resources/views/vendor/mail/text"
+		}
+	],
+	"settings": {}
+}
