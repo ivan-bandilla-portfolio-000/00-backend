@@ -5,12 +5,12 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"portfolio-backend/services/email"
+	"portfolio-backend/utils"
 
 	"gopkg.in/gomail.v2"
 )
@@ -43,12 +43,12 @@ func (ec *EmailController) SendEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	emailData := email.EmailData{
-		AppName:     getEnvOrDefault("APP_NAME", "Portfolio"),
+		AppName:     utils.GetEnvOrDefault("APP_NAME", "Portfolio"),
 		Subject:     req.Subject,
-		SiteURL:     getEnvOrDefault("APP_URL", "https://yourdomain.com"),
-		HeaderTitle: getEnvOrDefault("APP_NAME", "Portfolio"),
+		SiteURL:     utils.GetEnvOrDefault("APP_URL", "https://yourdomain.com"),
+		HeaderTitle: utils.GetEnvOrDefault("APP_NAME", "Portfolio"),
 		Year:        time.Now().Year(),
-		FromName:    getNameFromEmail(req.From, req.Name),
+		FromName:    utils.GetNameFromEmail(req.From, req.Name),
 		FromEmail:   req.From,
 		Body:        req.Body,
 	}
@@ -64,7 +64,7 @@ func (ec *EmailController) SendEmail(w http.ResponseWriter, r *http.Request) {
 	m.SetHeader("To", os.Getenv("THIS_PORTFOLIO_CONTACT_EMAIL"))
 	m.SetHeader("Subject", req.Subject)
 	m.SetBody("text/html", htmlBody)
-	plainBody := stripHTMLTags(htmlBody)
+	plainBody := utils.StripHTMLTags(htmlBody)
 	m.AddAlternative("text/plain", plainBody)
 
 	port, err := strconv.Atoi(os.Getenv("SMTP_PORT"))
@@ -101,10 +101,10 @@ func (ec *EmailController) PreviewEmail(w http.ResponseWriter, r *http.Request) 
 	}
 
 	emailData := email.EmailData{
-		AppName:     getEnvOrDefault("APP_NAME", "Ivan Bandilla Portfolio"),
+		AppName:     utils.GetEnvOrDefault("APP_NAME", "Ivan Bandilla Portfolio"),
 		Subject:     "Contact Form Preview",
-		SiteURL:     getEnvOrDefault("APP_URL", "https://ivanbandilla.dev"),
-		HeaderTitle: getEnvOrDefault("APP_NAME", "Ivan Bandilla"),
+		SiteURL:     utils.GetEnvOrDefault("APP_URL", "https://ivanbandilla.dev"),
+		HeaderTitle: utils.GetEnvOrDefault("APP_NAME", "Ivan Bandilla"),
 		Year:        time.Now().Year(),
 		FromName:    "John Doe",
 		FromEmail:   "john.doe@example.com",
@@ -122,23 +122,6 @@ func (ec *EmailController) PreviewEmail(w http.ResponseWriter, r *http.Request) 
 }
 
 // --- Helpers ---
-
-func getEnvOrDefault(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-func getNameFromEmail(email, name string) string {
-	if name != "" {
-		return name
-	}
-	if parts := strings.Split(email, "@"); len(parts) > 0 {
-		return strings.Title(strings.ReplaceAll(parts[0], ".", " "))
-	}
-	return email
-}
 
 func generateFallbackHTML(req EmailRequest) string {
 	return `
@@ -160,9 +143,4 @@ func generateFallbackHTML(req EmailRequest) string {
     </div>
 </body>
 </html>`
-}
-
-func stripHTMLTags(html string) string {
-	re := regexp.MustCompile(`<.*?>`)
-	return strings.TrimSpace(re.ReplaceAllString(html, ""))
 }

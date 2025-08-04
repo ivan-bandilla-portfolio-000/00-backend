@@ -7,7 +7,7 @@ import (
 
 	"portfolio-backend/app/providers"
 
-	"github.com/joho/godotenv"
+	"portfolio-backend/bootstrap"
 )
 
 func getEnvOrDefault(key, defaultValue string) string {
@@ -18,23 +18,13 @@ func getEnvOrDefault(key, defaultValue string) string {
 }
 
 func main() {
-	// Load environment variables
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("No .env file found or failed to load")
-	}
+	bootstrap.LoadEnv()
 
 	app := providers.NewAppServiceProvider()
 
 	// Start server
 	port := getEnvOrDefault("PORT", "8080")
 	log.Printf("Server started on :%s", port)
-
-	if app.MailProvider.EmailService != nil {
-		log.Println("Email templates loaded successfully")
-	} else {
-		log.Println("Email templates will use fallback HTML")
-	}
 
 	log.Fatal(http.ListenAndServe(":"+port, app.Handler()))
 }
