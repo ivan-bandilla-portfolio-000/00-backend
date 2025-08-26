@@ -23,7 +23,28 @@ jobs:
           go build -v ./...
 
       - name: Trigger Render deploy
-        uses: johnbeynon/render-deploy-action@v0.0.8
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          if [ -z "$RENDER_API_KEY" ] || [ -z "$RENDER_SERVICE_ID" ]; then
+            echo "Missing Render secrets. Set RENDER_API_KEY and RENDER_SERVICE_ID in repo secrets."
+            exit 1
+          fi
+
+          # Send raw JSON and capture status+body for diagnostics
+          response=$(curl -sS -w "\n%{http_code}" -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            --data-raw '{"clearCache": true}')
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "HTTP status: $http_code"
+          echo "Response body: $body"
+
+          if [ "$http_code" -ge 400 ]; then
+            echo "Render deploy failed"
+            exit 1
+          fi
