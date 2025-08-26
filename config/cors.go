@@ -14,12 +14,12 @@ type CORSConfig struct {
 func LoadCORSConfig() *CORSConfig {
 	return &CORSConfig{
 		Paths:                  []string{"api/*", "sanctum/csrf-cookie"},
-		AllowedMethods:         []string{"*"},
-		AllowedOrigins:         []string{"http://localhost:5173"},
+		AllowedMethods:         []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedOrigins:         []string{"http://localhost:5173", "http://localhost:3000"},
 		AllowedOriginsPatterns: []string{},
-		AllowedHeaders:         []string{"Content-Type", "X-Timezone"},
+		AllowedHeaders:         []string{"*"},
 		ExposedHeaders:         []string{},
-		MaxAge:                 0,
+		MaxAge:                 3600,
 		SupportsCredentials:    false,
 	}
 }
