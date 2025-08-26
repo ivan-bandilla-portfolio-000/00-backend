@@ -25,8 +25,12 @@ func main() {
 	app := providers.NewAppServiceProvider()
 
 	// Start server
-	serverURL := getEnvOrDefault("SERVER_URL", "8080")
-	serverPort := getEnvOrDefault("SERVER_PORT", "8080")
+	// Prefer the PORT that hosting provides; fallback to SERVER_PORT then 8080.
+	serverPort := os.Getenv("PORT")
+	if serverPort == "" {
+		serverPort = getEnvOrDefault("SERVER_PORT", "8080")
+	}
+	serverURL := getEnvOrDefault("SERVER_URL", serverPort)
 	log.Printf("Server [%s] started on %s", env, serverURL)
 
 	log.Fatal(http.ListenAndServe(":"+serverPort, app.Handler()))
