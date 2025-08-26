@@ -3,10 +3,13 @@ package api_controllers
 import (
 	"encoding/json"
 	"log"
+	"net"
 	"net/http"
+	"strings"
 
 	"portfolio-backend/services/email"
 	validation_email "portfolio-backend/services/validation/email"
+	"portfolio-backend/services/recaptcha"
 )
 
 type EmailController struct {
@@ -22,6 +25,7 @@ type EmailRequest struct {
 	Subject string `json:"subject"`
 	Body    string `json:"body"`
 	Name    string `json:"name,omitempty"`
+	RecaptchaToken string `json:"recaptchaToken,omitempty"`
 }
 
 // Handler: POST /send-email
@@ -31,6 +35,34 @@ func (ec *EmailController) SendEmail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
+
+	// Determine client IP (prefer X-Forwarded-For / X-Real-IP)
+    clientIP := func(r *http.Request) string {
+        if ip := r.Header.Get("X-Real-IP"); ip != "" {
+            return ip
+        }
+        if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
+            parts := strings.Split(fwd, ",")
+            return strings.TrimSpace(parts[0])
+        }
+        host, _, err := net.SplitHostPort(r.RemoteAddr)
+        if err != nil {
+            return r.RemoteAddr
+        }
+        return host
+    }(r)
+
+	clientUserAgent := r.Header.Get("User-Agent")
+
+	// Verify reCAPTCHA v3 token (action must match client-side action)
+    ok, score, err := recaptcha.Verify(req.RecaptchaToken, "contact_submit", 0.5, clientIP)
+    if err != nil || !ok {
+        log.Printf("recaptcha verification failed: ok=%v score=%v err=%v ip=%s user_agent=%q remote_addr=%s", ok, score, err, clientIP, clientUserAgent, r.RemoteAddr)
+        http.Error(w, "reCAPTCHA verification failed", http.StatusForbidden)
+        return
+    }
+
+	log.Printf("recaptcha verified: score=%.2f ip=%s user_agent=%q remote_addr=%s", score, clientIP, clientUserAgent, r.RemoteAddr)
 
 	valid, err := validation_email.ValidateEmail(req.From)
 	if err != nil {
